@@ -1,0 +1,3 @@
+(defn main ((args (Array String))) -> String
+  "not a valid main")
+

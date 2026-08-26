@@ -344,7 +344,28 @@ assertions in the ordinary test suite.
 ## Development
 
 Kal is developed with strict red-green-refactor TDD. Black-box compile-and-run
-tests are the primary executable specification for language behavior.
+specifications are the primary executable definition of language behavior. Each
+case is plain text rather than a dedicated Rust test:
+
+```text
+tests/spec/
+├── run/
+│   ├── hello.kal
+│   └── hello.stdout
+└── compile-fail/
+    ├── invalid-main.kal
+    └── invalid-main.stderr
+```
+
+Optional `.stdout`, `.stderr`, and `.exit` siblings define exact expected process
+behavior. Missing streams mean empty; exit defaults to `0` for runnable programs
+and `1` for rejected programs. Stream files are compared byte-for-byte, including
+whether they end with a newline.
+
+A single data-driven Rust adapter discovers every `.kal` specification and makes
+it an individually named Cargo test. Rust unit tests remain available for
+internal compiler components, but adding a language behavior does not require
+writing Rust test code.
 
 Repository workflow, architecture guardrails, test placement, and required
 quality checks live in [`AGENTS.md`](AGENTS.md). The README remains the source of

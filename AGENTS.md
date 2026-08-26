@@ -17,7 +17,8 @@ These instructions apply to the entire repository.
 
 Every behavior change and bug fix must follow red-green-refactor:
 
-1. Add the smallest test that specifies one observable behavior.
+1. Add the smallest text specification that defines one observable language
+   behavior, or a focused Rust unit test for an internal compiler component.
 2. Run it and confirm it fails for the intended reason.
 3. Implement only enough production code to make that test pass.
 4. Run the focused test and confirm it passes.
@@ -29,9 +30,18 @@ with a regression test that reproduces it.
 
 ## Test strategy
 
-- Prefer black-box acceptance tests that write `.kal` source, invoke `kal build`,
-  inspect the produced ELF when relevant, execute it, and assert status, stdout,
-  and stderr.
+- Define user-visible language behavior with text fixtures under `tests/spec`, not
+  with a new Rust test function. The generic Rust adapter in
+  `tests/spec_runner.rs` discovers and executes the fixtures.
+- Put successful programs under `tests/spec/run` and rejected programs under
+  `tests/spec/compile-fail`.
+- Each `<name>.kal` may have `<name>.stdout`, `<name>.stderr`, and `<name>.exit`
+  siblings. Missing streams mean empty; exit defaults to `0` for run specs and
+  `1` for compile-fail specs. Comparisons are byte-exact, including whether the
+  file ends with a newline.
+- Run specs require silent successful compilation, an executable little-endian
+  amd64 ELF64 artifact, and exact program status and streams. Compile-fail specs
+  compare compiler status and streams and require no output executable.
 - Add focused unit tests for parsing, name resolution, type checking, IR lowering,
   code generation, runtime behavior, and optimization when those layers acquire
   independent behavior.
@@ -102,7 +112,8 @@ tests or benchmark evidence.
 - `src/codegen.rs`: Cranelift object generation
 - `src/lib.rs`: build orchestration and atomic system linking
 - `src/main.rs`: `kal` command-line interface
-- `tests/`: black-box acceptance tests
+- `tests/spec/`: text specifications for user-visible language behavior
+- `tests/spec_runner.rs`: generic data-driven specification adapter
 - `examples/`: runnable `.kal` programs
 - `README.md`: language design, user documentation, current status, and roadmap
 

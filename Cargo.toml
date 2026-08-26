@@ -11,6 +11,11 @@ path = "src/lib.rs"
 name = "kal"
 path = "src/main.rs"
 
+[[test]]
+name = "language_specs"
+path = "tests/spec_runner.rs"
+harness = false
+
 [dependencies]
 cranelift-codegen = "0.135.1"
 cranelift-frontend = "0.135.1"
@@ -18,3 +23,6 @@ cranelift-module = "0.135.1"
 cranelift-native = "0.135.1"
 cranelift-object = "0.135.1"
 tempfile = "3.23.0"
+
+[dev-dependencies]
+datatest-stable = "0.3.3"
