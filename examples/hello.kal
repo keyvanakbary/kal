@@ -1,0 +1,5 @@
+(defn main ((args (Array String))) -> Int
+  (do
+    (print "Hello, world!")
+    0))
+
