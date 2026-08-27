@@ -1,0 +1,9 @@
+(trait Add
+  (fn add ((left Self) (right Self)) -> Self))
+
+(impl Add for Int
+  (fn add ((left Int) (right Int)) -> Int
+    (+ left right)))
+
+(defn main ((args (Array String))) -> Int
+  (add 20 22))

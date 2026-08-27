@@ -44,13 +44,17 @@ run.
 
 The current implementation includes:
 
-- S-expression tokenization and parsing
+- S-expression tokenization and parsing, including multiple top-level forms
 - Integer and string literals
-- Explicitly typed `main`
+- Explicitly typed `main` and native `Int` helper functions and calls
 - The `Int`, `String`, `Unit`, and `(Array String)` type forms needed by `main`
 - The `do` sequencing form
 - `print` for string literals
-- Minimal semantic validation
+- Checked `Int` addition through `+`
+- User-defined traits and statically selected implementations
+- Explicit generic parameters and trait requirements
+- Generic function monomorphization for each concrete call-site type
+- Static name and type validation for the implemented forms
 - Cranelift object generation
 - Atomic linking through the system `cc` driver
 - Diagnostics that do not leave a new executable after compilation fails
@@ -169,39 +173,48 @@ known at compile time.
 
 Traits are Kal's interface-like abstraction. A trait names a capability that a
 type can implement; the compiler resolves implementations statically and
-specializes generic code. Traits do not imply virtual runtime dispatch.
-
-The exact trait syntax will be driven by tests, but the intended model is:
+specializes generic code. Traits do not imply virtual runtime dispatch. Trait
+methods declare their contract with `Self`:
 
 ```lisp
-; Illustrative, not implemented syntax.
 (trait Add
   (fn add ((left Self) (right Self)) -> Self))
 
 (impl Add for Int
-  ...)
-
-(impl Add for Float64
-  ...)
+  (fn add ((left Int) (right Int)) -> Int
+    (+ left right)))
 ```
 
-A generic function declares its type parameters and trait requirements
-explicitly:
+A trait implementation supplies every declared method with an explicitly typed
+body whose signature matches the trait after replacing `Self` with the
+implemented type. A generic function declares its type parameters and trait
+requirements explicitly:
 
 ```lisp
-; Illustrative, not implemented syntax.
 (defn sum [T where (implements T Add)]
-  ((left T) (right T)) -> T
-  (add left right))
+  ((first T) (second T) (third T)) -> T
+  (add (add first second) third))
 ```
 
-Using `sum` with `Int` and `Float64` causes monomorphization: the compiler emits a
-specialized native version for each concrete type. Calls therefore need no
-boxing, tag checks, virtual table, or runtime method lookup.
+`add` is the primitive capability supplied by each implementation. `sum` is a
+higher-level generic algorithm that composes that capability to combine three
+values. Calling `sum` with `Int` causes monomorphization: the compiler emits a
+specialized native version for that concrete type. As later numeric types
+acquire `Add` implementations, each concrete type will receive its own
+specialization. Calls therefore need no boxing, tag checks, virtual table, or
+runtime method lookup.
 
-Implementation will begin with built-in statically selected arithmetic. The
-general user-defined trait abstraction will only be extracted after multiple
-concrete operations demonstrate what the shared mechanism must support.
+The checked-in example specializes `sum` for `Int` and returns `42` as its
+process status:
+
+```console
+cargo run -- build examples/add.kal -o add
+./add
+echo $?
+```
+
+The current executable trait path supports `Int`. Further primitive types and
+built-in overloads will extend the same static mechanism.
 
 ## Evaluation, sequencing, and immutability
 
@@ -400,12 +413,12 @@ truth for Kal's user-visible language decisions.
 - Separately linked Rust runtime
 - Precise non-moving tracing garbage collector
 
-### 4. Generic programming and optimization
+### 4. Generic programming and optimization — in progress
 
 - Built-in arithmetic overloads
-- User-defined traits
-- Explicit generic parameters and constraints
-- Monomorphization
+- User-defined traits — implemented
+- Explicit generic parameters and constraints — implemented
+- Monomorphization — implemented
 - SSA IR and measured optimization passes
 - Fast development and aggressively optimized release modes
 

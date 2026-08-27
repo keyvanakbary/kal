@@ -1,0 +1,13 @@
+(trait Add
+  (fn add ((left Self) (right Self)) -> Self))
+
+(impl Add for Int
+  (fn add ((left Int) (right Int)) -> Int
+    (+ left right)))
+
+(defn sum [T where (implements T Add)]
+  ((first T) (second T) (third T)) -> T
+  (add (add first second) third))
+
+(defn main ((args (Array String))) -> Int
+  (sum 10 12 20))

@@ -12,21 +12,26 @@ pub(crate) enum Expression {
 enum Token {
     LeftParenthesis,
     RightParenthesis,
+    LeftBracket,
+    RightBracket,
     Atom(String),
     String(String),
 }
 
-pub(crate) fn parse(source: &str) -> Result<Expression, Error> {
+pub(crate) fn parse(source: &str) -> Result<Vec<Expression>, Error> {
     let tokens = tokenize(source)?;
     let mut parser = Parser {
         tokens: &tokens,
         position: 0,
     };
-    let expression = parser.expression()?;
-    if parser.position != tokens.len() {
-        return Err(Error::new("expected exactly one top-level form"));
+    let mut expressions = Vec::new();
+    while parser.position != tokens.len() {
+        expressions.push(parser.expression()?);
     }
-    Ok(expression)
+    if expressions.is_empty() {
+        return Err(Error::new("expected a top-level form"));
+    }
+    Ok(expressions)
 }
 
 fn tokenize(source: &str) -> Result<Vec<Token>, Error> {
@@ -37,6 +42,8 @@ fn tokenize(source: &str) -> Result<Vec<Token>, Error> {
         match character {
             '(' => tokens.push(Token::LeftParenthesis),
             ')' => tokens.push(Token::RightParenthesis),
+            '[' => tokens.push(Token::LeftBracket),
+            ']' => tokens.push(Token::RightBracket),
             ';' => {
                 for character in characters.by_ref() {
                     if character == '\n' {
@@ -49,7 +56,7 @@ fn tokenize(source: &str) -> Result<Vec<Token>, Error> {
             first => {
                 let mut atom = String::from(first);
                 while let Some(&next) = characters.peek() {
-                    if next.is_whitespace() || matches!(next, '(' | ')' | ';') {
+                    if next.is_whitespace() || matches!(next, '(' | ')' | '[' | ']' | ';') {
                         break;
                     }
                     atom.push(next);
@@ -106,8 +113,12 @@ impl Parser<'_> {
         self.position += 1;
 
         match token {
-            Token::LeftParenthesis => self.list(),
+            Token::LeftParenthesis => self.list(Token::RightParenthesis, "unterminated list"),
+            Token::LeftBracket => {
+                self.list(Token::RightBracket, "unterminated generic parameter list")
+            }
             Token::RightParenthesis => Err(Error::new("unexpected `)`")),
+            Token::RightBracket => Err(Error::new("unexpected `]`")),
             Token::String(value) => Ok(Expression::String(value)),
             Token::Atom(atom) => match atom.parse::<i64>() {
                 Ok(integer) => Ok(Expression::Integer(integer)),
@@ -116,16 +127,16 @@ impl Parser<'_> {
         }
     }
 
-    fn list(&mut self) -> Result<Expression, Error> {
+    fn list(&mut self, closing: Token, unterminated: &str) -> Result<Expression, Error> {
         let mut expressions = Vec::new();
         loop {
             match self.tokens.get(self.position) {
-                Some(Token::RightParenthesis) => {
+                Some(token) if *token == closing => {
                     self.position += 1;
                     return Ok(Expression::List(expressions));
                 }
                 Some(_) => expressions.push(self.expression()?),
-                None => return Err(Error::new("unterminated list")),
+                None => return Err(Error::new(unterminated)),
             }
         }
     }
